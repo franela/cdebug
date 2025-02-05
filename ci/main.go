@@ -16,23 +16,24 @@ package main
 
 import (
 	"context"
+	"dagger/ci/internal/dagger"
 	"fmt"
 )
 
 type Ci struct{}
 
-func (m *Ci) Build(ctx context.Context, src *Directory) *File {
-	return dag.Go().FromVersion("1.22-alpine").Build(src, GoBuildOpts{
+func (m *Ci) Build(ctx context.Context, src *dagger.Directory) *dagger.File {
+	return dag.Go().FromVersion("1.22-alpine").Build(src, dagger.GoBuildOpts{
 		Static: true,
 	}).File("cdebug")
 }
 
 func (m *Ci) TestExec(ctx context.Context,
-	src *Directory,
+	src *dagger.Directory,
 	// +optional
 	// +default="docker"
 	tool string,
-) (*Container, error) {
+) (*dagger.Container, error) {
 	if tool != "docker" && tool != "kubernetes" && tool != "containerd" && tool != "nerdctl" {
 		return nil, fmt.Errorf("tool %s is not supported. Supported values are: kubernetes,containerd,nerdctl,docker")
 	}
@@ -51,7 +52,7 @@ func (m *Ci) TestExec(ctx context.Context,
 	return nil, nil
 }
 
-func (m *Ci) TestDockerExec(ctx context.Context, src *Directory) (*Container, error) {
+func (m *Ci) TestDockerExec(ctx context.Context, src *dagger.Directory) (*dagger.Container, error) {
 	cdebug := m.Build(ctx, src)
 
 	docker := dag.
@@ -70,7 +71,7 @@ func (m *Ci) TestDockerExec(ctx context.Context, src *Directory) (*Container, er
 		WithEnvVariable("DOCKER_TLS_CERTDIR", "").
 		WithExec([]string{
 			"dockerd-entrypoint.sh",
-		}, ContainerWithExecOpts{
+		}, dagger.ContainerWithExecOpts{
 			InsecureRootCapabilities: true,
 		})
 
