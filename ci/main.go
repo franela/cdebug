@@ -68,12 +68,7 @@ func (m *Ci) TestDockerExec(ctx context.Context, src *dagger.Directory) (*dagger
 	}
 
 	docker = docker.
-		WithEnvVariable("DOCKER_TLS_CERTDIR", "").
-		WithExec([]string{
-			"dockerd-entrypoint.sh",
-		}, dagger.ContainerWithExecOpts{
-			InsecureRootCapabilities: true,
-		})
+		WithEnvVariable("DOCKER_TLS_CERTDIR", "")
 
 	return dag.Go().
 		FromVersion("1.22-alpine").
@@ -82,7 +77,10 @@ func (m *Ci) TestDockerExec(ctx context.Context, src *dagger.Directory) (*dagger
 		WithFile("/usr/local/bin/docker", dockerCli).
 		WithDirectory("/app/cdebug", src).
 		WithWorkdir("/app/cdebug").
-		WithServiceBinding("docker", docker.AsService()).
+		WithServiceBinding("docker", docker.AsService(dagger.ContainerAsServiceOpts{
+			Args:                     []string{"dockerd-entrypoint.sh"},
+			InsecureRootCapabilities: true,
+		})).
 		WithEnvVariable("DOCKER_HOST", "tcp://docker:2375").
 		WithExec([]string{"go", "test", "-v", "./e2e/exec/docker_test.go"}), nil
 }
